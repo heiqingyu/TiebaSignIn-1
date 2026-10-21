@@ -3,7 +3,7 @@ name: Daily Tieba Sign-In
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 22 * * *'  # 北京时间 6:30 (UTC+8)
+    - cron: '35 22 * * *'  # 北京时间 6:35 (UTC+8)，调整分钟数可让 GitHub 重新注册定时任务
 
 jobs:
   signin:
@@ -24,6 +24,8 @@ jobs:
         env:
           BDUSS: ${{ secrets.BDUSS }}
           SCKEY: ${{ secrets.SCKEY }}
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
         run: |
           mvn -B compile exec:java \
             -Dexec.mainClass="top.srcrs.Run" \

@@ -1,5 +1,5 @@
 <div align="center"> 
-<h1 align="center">贴吧签到助手（PushPlus版）</h1>
+<h1 align="center">贴吧签到助手</h1>
 <img src="https://img.shields.io/github/issues/srcrs/TiebaSignIn?color=green">
 <img src="https://img.shields.io/github/stars/srcrs/TiebaSignIn?color=yellow">
 <img src="https://img.shields.io/github/forks/srcrs/TiebaSignIn?color=orange">
@@ -15,7 +15,7 @@
 
 + 贴吧签到(最多支持 200 个)
 
-+ 支持推送运行结果至微信(通过 server 酱)
++ 支持推送运行结果至钉钉群 / 微信(通过 server 酱)
 
 # 使用方法
 
@@ -63,9 +63,23 @@ BDUSS | xxxxxxxxxxx
 
 ## 成功了
 
-每天早上`6:30`将会自动进行签到
+每天早上`6:35`将会自动进行签到
 
-## 添加PushPlus酱推送
+## 添加钉钉机器人推送（推荐）
+
+1. 钉钉群 -> 群设置 -> 机器人 -> 添加机器人 -> 自定义，安全设置选择「加签」，复制 Webhook 和加签密钥。
+2. 在仓库 Settings -> Secrets and variables -> Actions 中添加：
+
+Name | Value
+-|-
+DINGTALK_WEBHOOK | https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxx
+DINGTALK_SECRET | SECxxxxxxxxxx
+
+配置了 `DINGTALK_WEBHOOK` 后优先使用钉钉推送；未配置时才回退到 PushPlus。
+
+> 加签密钥可以留空（此时钉钉机器人需使用「自定义关键词」方式，关键词建议设置为「签到」）。
+
+## 添加PushPlus推送（可选）
 
 需在Secrets中添加PushPlus的`SCKEY`，格式如下
 

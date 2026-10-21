@@ -14,11 +14,17 @@ import org.slf4j.LoggerFactory;
 import top.srcrs.domain.Cookie;
 import top.srcrs.util.Encryption;
 import top.srcrs.util.Request;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -88,9 +94,7 @@ public class Run {
         run.runSign();
         LOGGER.info("共 {} 个贴吧 - 成功: {} - 失败: {} - {} ", followNum, success.size(), followNum - success.size(), failed);
         LOGGER.info("失效 {} 个贴吧: {} ", invalid.size(), invalid);
-        if (args.length == 2) {
-            run.send(args[1]);
-        }
+        run.notifyResult(args.length >= 2 ? args[1] : null);
     }
 
     /**
@@ -195,6 +199,103 @@ public class Run {
         } catch (Exception e) {
             LOGGER.error("签到部分出现错误 -- " + e);
         }
+    }
+
+    /**
+     * 发送运行结果，优先使用钉钉机器人，未配置时回退到 PushPlus
+     *
+     * @param pushPlusToken PushPlus 的 token，未配置时为 null
+     */
+    public void notifyResult(String pushPlusToken) {
+        String webhook = System.getenv("DINGTALK_WEBHOOK");
+        String secret = System.getenv("DINGTALK_SECRET");
+        if (webhook != null && !webhook.trim().isEmpty()) {
+            sendDingTalk(webhook.trim(), secret == null ? "" : secret.trim());
+        } else if (pushPlusToken != null && !pushPlusToken.trim().isEmpty()) {
+            send(pushPlusToken.trim());
+        } else {
+            LOGGER.info("未配置 DINGTALK_WEBHOOK 或 PushPlus SCKEY，跳过推送");
+        }
+    }
+
+    /**
+     * 通过钉钉自定义机器人推送运行结果
+     *
+     * @param webhook 机器人 Webhook 地址
+     * @param secret  加签密钥，安全设置选「加签」时必填；选「自定义关键词」时留空
+     */
+    public void sendDingTalk(String webhook, String secret) {
+        try {
+            String url = webhook;
+            if (!secret.isEmpty()) {
+                long timestamp = System.currentTimeMillis();
+                String stringToSign = timestamp + "\n" + secret;
+                Mac mac = Mac.getInstance("HmacSHA256");
+                mac.init(new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA256"));
+                String sign = URLEncoder.encode(
+                        Base64.getEncoder().encodeToString(mac.doFinal(stringToSign.getBytes("UTF-8"))), "UTF-8");
+                url = url + (url.contains("?") ? "&" : "?") + "timestamp=" + timestamp + "&sign=" + sign;
+            }
+
+            JSONObject markdown = new JSONObject();
+            markdown.put("title", "百度贴吧自动签到");
+            markdown.put("text", buildMarkdownText());
+            JSONObject payload = new JSONObject();
+            payload.put("msgtype", "markdown");
+            payload.put("markdown", markdown);
+
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(15000);
+            connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(payload.toJSONString().getBytes("UTF-8"));
+            }
+
+            int code = connection.getResponseCode();
+            InputStream is = code < 400 ? connection.getInputStream() : connection.getErrorStream();
+            StringBuilder response = new StringBuilder();
+            if (is != null) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+            }
+            connection.disconnect();
+
+            LOGGER.info("钉钉推送响应: {}", response);
+            JSONObject result = JSONObject.parseObject(response.toString());
+            if (result != null && result.getIntValue("errcode") != 0) {
+                LOGGER.error("钉钉推送失败: errcode={} errmsg={}", result.get("errcode"), result.get("errmsg"));
+            }
+        } catch (Exception e) {
+            LOGGER.error("钉钉推送异常 -- " + e);
+        }
+    }
+
+    /**
+     * 组装推送正文
+     */
+    private String buildMarkdownText() {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        format.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
+        StringBuilder text = new StringBuilder();
+        text.append("### 百度贴吧自动签到结果\n\n");
+        text.append("- 贴吧总数：").append(followNum).append("\n");
+        text.append("- 签到成功：").append(success.size()).append("\n");
+        text.append("- 签到失败：").append(followNum - success.size()).append("\n");
+        if (!failed.isEmpty()) {
+            text.append("- 失败贴吧：").append(String.join(", ", failed)).append("\n");
+        }
+        if (!invalid.isEmpty()) {
+            text.append("- 失效贴吧：").append(String.join(", ", invalid)).append("\n");
+        }
+        text.append("\n> 运行时间：").append(format.format(new Date())).append("（UTC+8）");
+        return text.toString();
     }
 
     /**

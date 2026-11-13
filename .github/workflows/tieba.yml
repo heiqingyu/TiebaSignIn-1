@@ -3,7 +3,10 @@ name: Daily Tieba Sign-In
 on:
   workflow_dispatch:
   schedule:
-    - cron: '35 22 * * *'  # 北京时间 6:35 (UTC+8)，调整分钟数可让 GitHub 重新注册定时任务
+    # 北京时间 6:40 (UTC+8)
+    - cron: '40 22 * * *'
+    # 北京时间 18:40 (UTC+8)，冗余兜底，防止主时段被 GitHub 丢触发
+    - cron: '40 10 * * *'
 
 jobs:
   signin:
@@ -18,7 +21,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '8'
-          cache: 'maven'  # 使用官方推荐的 Maven 依赖缓存
+          cache: 'maven'
 
       - name: Build and execute
         env:

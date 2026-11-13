@@ -2,12 +2,11 @@ name: Daily Tieba Sign-In
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ master ]
   schedule:
-    # 北京时间 6:40 (UTC+8)
     - cron: '40 22 * * *'
-    # 北京时间 18:40 (UTC+8)，冗余兜底，防止主时段被 GitHub 丢触发
     - cron: '40 10 * * *'
-
 jobs:
   signin:
     runs-on: ubuntu-latest

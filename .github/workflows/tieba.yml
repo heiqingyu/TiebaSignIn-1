@@ -6,9 +6,9 @@ on:
     branches: [ master ]
   schedule:
     # 北京时间 6:58 (UTC+8)
-    - cron: '37 22 * * *'
+    - cron: '58 22 * * *'
     # 北京时间 18:58 (UTC+8)，冗余兜底
-    - cron: '37 10 * * *'
+    - cron: '58 10 * * *'
 
 jobs:
   signin:
@@ -32,6 +32,7 @@ jobs:
         run: |
           today=$(TZ=Asia/Shanghai date +%F)
           last=$(cat .notify_last 2>/dev/null || true)
+          echo "today=$today" >> "$GITHUB_OUTPUT"
           if [ "$last" = "$today" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "今天已通知过，本次跳过钉钉推送"
@@ -53,8 +54,8 @@ jobs:
             -Dexec.args="$BDUSS $SCKEY"
 
       - name: Mark notified
-        if: success()
-        run: TZ=Asia/Shanghai date +%F > .notify_last
+        if: success() && steps.guard.outputs.skip != 'true'
+        run: echo "${{ steps.guard.outputs.today }}" > .notify_last
 
       - name: Refresh cron schedule
         if: always()

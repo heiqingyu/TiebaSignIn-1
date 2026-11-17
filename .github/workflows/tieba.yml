@@ -6,9 +6,9 @@ on:
     branches: [ master ]
   schedule:
     # 北京时间 6:58 (UTC+8)
-    - cron: '38 22 * * *'
+    - cron: '53 22 * * *'
     # 北京时间 18:58 (UTC+8)，冗余兜底
-    - cron: '38 10 * * *'
+    - cron: '53 10 * * *'
 
 jobs:
   signin:

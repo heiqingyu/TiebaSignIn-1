@@ -56,16 +56,7 @@ jobs:
       - name: Mark notified
         if: success() && steps.guard.outputs.skip != 'true'
         run: echo "${{ steps.guard.outputs.today }}" > .notify_last
-        
-      - name: Daily extra activity
-        if: success() && steps.guard.outputs.skip != 'true'
-        env:
-          BDUSS: ${{ secrets.BDUSS }}
-          TIEBA_FORUM: ${{ secrets.TIEBA_FORUM }}
-          TIEBA_TID: ${{ secrets.TIEBA_TID }}
-        run: |
-          python3 extra_tasks.py
-          
+                  
       - name: Refresh cron schedule
         if: always()
         run: |

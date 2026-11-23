@@ -61,7 +61,8 @@ jobs:
         if: success() && steps.guard.outputs.skip != 'true'
         env:
           BDUSS: ${{ secrets.BDUSS }}
-          TIEBA_FORUM: 情殇青羽
+          TIEBA_FORUM: ${{ secrets.TIEBA_FORUM }}
+          TIEBA_TID: ${{ secrets.TIEBA_TID }}
         run: |
           python3 extra_tasks.py
           
